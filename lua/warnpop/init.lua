@@ -26,7 +26,9 @@ end
 M.goto_last_diag = function()
   local diag = M.last_diag
   vim.notify("TEEEEEEEEEEEEEEST!", vim.log.levels.WARN)
-  if not diag or not vim.api.nvim_buf_is_valid(diag.diag.buf) then
+  if not diag then
+    vim.notify("no valid diags stored", vim.log.levels.WARN)
+  elseif not vim.api.nvim_buf_is_valid(diag.diag.buf) then
     vim.notify("no valid diags stored", vim.log.levels.WARN)
     return
   end
