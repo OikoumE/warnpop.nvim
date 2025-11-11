@@ -42,10 +42,11 @@ M.create_autocmd = function(win_opts)
     callback = function(args)
       local diag_count = { error = 0, warning = 0 }
       local diagnostics = vim.diagnostic.get(args.buf)
-      for i, diag in ipairs(diagnostics) do
+      for _, diag in ipairs(diagnostics) do
         if diag.severity == vim.diagnostic.severity.ERROR then
-          M.last_diag = { diagnostic = diag, args = args, active = true }
-          if vim.api.nvim_buf_is_valid(args.buf) then
+          -- TODO: check if "In included file:"
+          if diag.message and not diag.message:find("In included file:") then
+            M.last_diag = { diagnostic = diag, args = args, active = true }
           end
           diag_count.error = diag_count.error + 1
         elseif diag.severity == vim.diagnostic.severity.WARN then
