@@ -14,7 +14,7 @@ local M = {
   nsName = "Warnpop",
   eHl = "ErrorHighlight",
   wHl = "WarnHighlight",
-  last_diag = {},
+  last_diag = { diagnostic = {}, args = {}, active = false },
 }
 M.keymap_set = function()
   print("wtf!!")
@@ -45,7 +45,7 @@ M.create_autocmd = function(win_opts)
       local diagnostics = vim.diagnostic.get(args.buf)
       for i, diag in ipairs(diagnostics) do
         if diag.severity == vim.diagnostic.severity.ERROR then
-          M.last_diag = { diag, args }
+          M.last_diag = { diagnostic = diag, args = args, active = true }
           if vim.api.nvim_buf_is_valid(args.buf) then
           end
           diag_count.error = diag_count.error + 1
@@ -69,6 +69,7 @@ M.create_autocmd = function(win_opts)
       elseif vim.api.nvim_win_is_valid(M.win) then
         vim.api.nvim_win_close(M.win, true)
         diag_count = { error = 0, warning = 0 }
+        M.last_diag.active = false
       end
     end,
   })
