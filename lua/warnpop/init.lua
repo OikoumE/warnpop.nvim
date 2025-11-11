@@ -24,8 +24,8 @@ M.keymap_set = function()
   require("which-key").add({ { "]e", M.goto_last_diag, desc = "goto next [E]rror", mode = "n" } })
 end
 M.goto_last_diag = function()
-  local diag = M.last_diag
   vim.notify("TEEEEEEEEEEEEEEST!", vim.log.levels.WARN)
+  local diag = M.last_diag
   if not diag or not diag.diagnostic or not diag.diagnostic.bufnr then
     vim.notify("no valid diags stored", vim.log.levels.WARN)
   elseif not vim.api.nvim_buf_is_valid(diag.diagnostic.bufnr) then
@@ -33,9 +33,9 @@ M.goto_last_diag = function()
     return
   end
   -- switch buffer
-  vim.api.nvim_set_current_buf(diag.diag.buf)
+  vim.api.nvim_set_current_buf(diag.diagnostic.bufnr)
   -- jump to line
-  vim.api.nvim_win_set_cursor(0, { diag.diag.lnum + 1, diag.diag.col })
+  vim.api.nvim_win_set_cursor(0, { diag.diagnostic.lnum + 1, diag.diagnostic.col })
 end
 M.ns = vim.api.nvim_create_namespace(M.nsName)
 M.create_autocmd = function(win_opts)
