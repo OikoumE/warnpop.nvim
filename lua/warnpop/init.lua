@@ -17,10 +17,7 @@ local M = {
   last_diag = { diagnostic = {}, args = {}, active = false },
 }
 M.keymap_set = function()
-  print("wtf!!")
-  vim.notify("wtf", vim.log.levels.INFO)
   vim.keymap.set("n", "]e", M.goto_last_diag, { desc = "goto next [E]rror" })
-  -- vim.keymap.set("n", "]e", M.goto_last_diag, { desc = "goto next [E]rror" })
   require("which-key").add({ { "]e", M.goto_last_diag, desc = "goto next [E]rror", mode = "n" } })
 end
 M.goto_last_diag = function()
@@ -36,17 +33,20 @@ M.goto_last_diag = function()
 end
 M.ns = vim.api.nvim_create_namespace(M.nsName)
 M.create_autocmd = function(win_opts)
-  print("wtf!! create")
-  vim.notify("wtf create", vim.log.levels.INFO)
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
     callback = function(args)
+      -- TODO : dont know if this is fired ONCE with all data
+      -- or multiple times with different datas
+      -- we are not collecting data and comparing with old/new
+      -- so might be misrepresenting number of errors across project
+      -- and only show per buffer
+
       local diag_count = { error = 0, warning = 0 }
       local diagnostics = vim.diagnostic.get(args.buf)
       for _, diag in ipairs(diagnostics) do
         if diag.severity == vim.diagnostic.severity.ERROR then
           -- TODO: check if "In included file:"
           if not diag.message:find("In included file:") then
-            vim.notify("no include" .. diag.message, vim.diagnostic.severity.INFO)
             M.last_diag = { diagnostic = diag, args = args, active = true }
           end
           M.last_diag.active = true
@@ -77,8 +77,6 @@ M.create_autocmd = function(win_opts)
   })
 end
 M.setup = function(win_opts)
-  print("wtf!! setup")
-  vim.notify("setupcreate", vim.log.levels.INFO)
   M.keymap_set()
   vim.api.nvim_set_hl(0, M.eHl, { bg = "#FF0000", fg = "Cyan" })
   vim.api.nvim_set_hl(0, M.wHl, { bg = "#FFFF00", fg = "Blue" })
