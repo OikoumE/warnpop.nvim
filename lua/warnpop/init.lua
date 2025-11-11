@@ -26,7 +26,7 @@ end
 M.goto_last_diag = function()
   local diag = M.last_diag
   if not diag.active or not vim.api.nvim_buf_is_valid(diag.diagnostic.bufnr) then
-    vim.notify("no valid diags stored", vim.log.levels.WARN)
+    vim.notify("No error to jump to!", vim.log.levels.WARN)
     return
   end
   -- switch buffer
