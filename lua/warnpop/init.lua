@@ -78,6 +78,9 @@ M.create_autocmd = function(win_opts)
 end
 M.setup = function(win_opts)
   M.keymap_set()
+  vim.bo[M.buf].buftype = "nofile"
+  vim.bo[M.buf].bufhidden = "wipe"
+  vim.bo[M.buf].swapfile = false
   vim.api.nvim_set_hl(0, M.eHl, { bg = "#FF0000", fg = "Cyan" })
   vim.api.nvim_set_hl(0, M.wHl, { bg = "#FFFF00", fg = "Blue" })
   M.create_autocmd(win_opts)
