@@ -45,6 +45,7 @@ M.create_autocmd = function(win_opts)
       for _, diag in ipairs(diagnostics) do
         if diag.severity == vim.diagnostic.severity.ERROR then
           -- TODO: check if "In included file:"
+          vim.notify(diag.message, vim.diagnostic.severity.INFO)
           if diag.message and not diag.message:find("In included file:") then
             M.last_diag = { diagnostic = diag, args = args, active = true }
           end
