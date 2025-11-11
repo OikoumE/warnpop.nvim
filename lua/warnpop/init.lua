@@ -60,7 +60,9 @@ M.create_autocmd = function(win_opts)
         local errStr = "-  Err:" .. diag_count.error .. "   Warn:" .. diag_count.warning .. "  -"
         local errLen = #errStr --vim.fn.strwidth(errStr)
         local errMid = math.floor(errLen / 2)
+        vim.bo[M.buf].modifiable = true
         vim.api.nvim_buf_set_lines(M.buf, -2, -1, false, { errStr })
+        vim.bo[M.buf].modifiable = false
         vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, 2, { end_col = errMid - 1, hl_group = M.eHl })
         vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, errMid, { end_col = errLen - 2, hl_group = M.wHl })
         vim.api.nvim_win_set_width(M.win, errLen)
@@ -77,7 +79,6 @@ M.setup = function(win_opts)
   M.keymap_set()
   vim.api.nvim_set_hl(0, M.eHl, { bg = "#FF0000", fg = "Cyan" })
   vim.api.nvim_set_hl(0, M.wHl, { bg = "#FFFF00", fg = "Blue" })
-  vim.bo[M.buf].modifiable = false
   M.create_autocmd(win_opts)
 end
 
