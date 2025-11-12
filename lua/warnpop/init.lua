@@ -1,3 +1,4 @@
+local severity = vim.diagnostic.severity
 local M = {
   buf = -1, -- listed =false, scratch =true
   win = -1,
@@ -16,6 +17,7 @@ local M = {
   eHl = "ErrorHighlight",
   wHl = "WarnHighlight",
   last_diag = { diagnostic = {}, args = {}, active = false },
+  diags = {},
 }
 M.keymap_set = function()
   vim.keymap.set("n", "]e", M.goto_last_diag, { desc = "goto next [E]rror" })
@@ -24,7 +26,7 @@ end
 M.goto_last_diag = function()
   local diag = M.last_diag
   if not diag.active or not vim.api.nvim_buf_is_valid(diag.diagnostic.bufnr) then
-    vim.notify("No error to jump to!", vim.log.levels.WARN)
+    vim.notify("No error to jump to!", severity.WARN)
     return
   end
   -- switch buffer
@@ -32,59 +34,61 @@ M.goto_last_diag = function()
   -- jump to line
   vim.api.nvim_win_set_cursor(0, { diag.diagnostic.lnum + 1, diag.diagnostic.col })
 end
-M.create_buf = function(diag_count)
-  if vim.api.nvim_buf_is_valid(M.buf) then
-    vim.cmd("bd " .. M.buf)
+M.create_string = function()
+  local hasJumpTarget = ""
+  if vim.api.nvim_buf_is_valid(M.last_diag.args.buf) then
+    hasJumpTarget = "*"
   end
-  M.buf = vim.api.nvim_create_buf(false, true) -- listed =false, scratch =true
-  if diag_count.error > 0 and diag_count.warning > 0 then
-    if not vim.api.nvim_win_is_valid(M.win) then
-      M.win = vim.api.nvim_open_win(M.buf, false, M.win_opts) -- diag_count.error
+  local errStr = "-  Err:" .. #M.diags .. hasJumpTarget .. "  -"
+  return #errStr, errStr
+end
+M.create_buf = function()
+  print("diags:" .. tostring(#M.diags))
+  if #M.diags > 0 then
+    local errLen, errStr = M.create_string()
+    if not vim.api.nvim_buf_is_valid(M.buf) then
+      M.buf = vim.api.nvim_create_buf(false, true) -- listed =false, scratch =true
+      vim.api.nvim_buf_set_lines(M.buf, -2, -1, false, { errStr })
+      vim.bo[M.buf].modifiable = false
+      vim.bo[M.buf].buftype = "nofile"
+      vim.bo[M.buf].bufhidden = "wipe"
+      vim.bo[M.buf].swapfile = false
+      vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, 2, { end_col = errLen - 2, hl_group = M.eHl })
     end
-    local errStr = "-  Err:" .. diag_count.error .. "   Warn:" .. diag_count.warning .. "  -"
-    local errLen = #errStr
-    local errMid = math.floor(errLen / 2)
-
-    vim.api.nvim_buf_set_lines(M.buf, -2, -1, false, { errStr })
-    vim.bo[M.buf].modifiable = false
-    vim.bo[M.buf].buftype = "nofile"
-    vim.bo[M.buf].bufhidden = "wipe"
-    vim.bo[M.buf].swapfile = false
-
-    vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, 2, { end_col = errMid - 1, hl_group = M.eHl })
-    vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, errMid, { end_col = errLen - 2, hl_group = M.wHl })
+    if not vim.api.nvim_win_is_valid(M.win) then
+      M.win = vim.api.nvim_open_win(M.buf, false, M.win_opts)
+    end
     vim.api.nvim_win_set_width(M.win, errLen)
-  elseif vim.api.nvim_win_is_valid(M.win) then
-    vim.api.nvim_win_close(M.win, true)
-    diag_count = { error = 0, warning = 0 }
+  else
+    if vim.api.nvim_buf_is_valid(M.buf) then
+      vim.cmd("bd " .. M.buf)
+    end
+    if vim.api.nvim_win_is_valid(M.win) then
+      vim.api.nvim_win_close(M.win, true)
+    end
     M.last_diag.active = false
+    vim.notify("closing win!" .. tostring(#M.diags))
+    print("closing win!" .. tostring(#M.diags))
   end
 end
 M.ns = vim.api.nvim_create_namespace(M.nsName)
-M.create_autocmd = function(win_opts)
+M.create_autocmd = function()
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
     callback = function(args)
-      -- TODO : dont know if this is fired ONCE with all data
-      -- or multiple times with different datas
-      -- we are not collecting data and comparing with old/new
-      -- so might be misrepresenting number of errors across project
-      -- and only show per buffer
-      local diag_count = { error = 0, warning = 0 }
       local diagnostics = vim.diagnostic.get(args.buf)
+      --Fields `bufnr`, `end_lnum`, `end_col`, and `severity`
+      M.diags = {}
       for _, diag in ipairs(diagnostics) do
-        if diag.severity == vim.diagnostic.severity.ERROR then
+        if diag.severity == severity.ERROR then
           -- TODO: check if "In included file:"
-          if not diag.message:find("In included file:") then
+          if not diag.message:find("In included file:") and not M.last_diag.active then
             M.last_diag = { diagnostic = diag, args = args, active = true }
           end
+          table.insert(M.diags, { diagnostic = diag, args = args, active = true })
           M.last_diag.active = true
-          diag_count.error = diag_count.error + 1
-        elseif diag.severity == vim.diagnostic.severity.WARN then
-          diag_count.warning = diag_count.warning + 1
         end
       end
-
-      M.create_buf(diag_count)
+      M.create_buf()
     end,
   })
 end
