@@ -1,6 +1,7 @@
 local M = {
   buf = vim.api.nvim_create_buf(false, true), -- listed =false, scratch =true
   win = -1,
+  win_opts = {},
   default_win_opts = {
     relative = "editor",
     width = 17,
@@ -31,6 +32,34 @@ M.goto_last_diag = function()
   -- jump to line
   vim.api.nvim_win_set_cursor(0, { diag.diagnostic.lnum + 1, diag.diagnostic.col })
 end
+M.create_buf = function(diag_count)
+  if vim.api.nvim_buf_is_valid(M.buf) then
+    vim.cmd("bd " .. M.buf)
+  end
+  M.buf = vim.api.nvim_create_buf(false, true) -- listed =false, scratch =true
+  if diag_count.error > 0 and diag_count.warning > 0 then
+    if not vim.api.nvim_win_is_valid(M.win) then
+      M.win = vim.api.nvim_open_win(M.buf, false, M.win_opts) -- diag_count.error
+    end
+    local errStr = "-  Err:" .. diag_count.error .. "   Warn:" .. diag_count.warning .. "  -"
+    local errLen = #errStr
+    local errMid = math.floor(errLen / 2)
+
+    vim.api.nvim_buf_set_lines(M.buf, -2, -1, false, { errStr })
+    vim.bo[M.buf].modifiable = false
+    vim.bo[M.buf].buftype = "nofile"
+    vim.bo[M.buf].bufhidden = "wipe"
+    vim.bo[M.buf].swapfile = false
+
+    vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, 2, { end_col = errMid - 1, hl_group = M.eHl })
+    vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, errMid, { end_col = errLen - 2, hl_group = M.wHl })
+    vim.api.nvim_win_set_width(M.win, errLen)
+  elseif vim.api.nvim_win_is_valid(M.win) then
+    vim.api.nvim_win_close(M.win, true)
+    diag_count = { error = 0, warning = 0 }
+    M.last_diag.active = false
+  end
+end
 M.ns = vim.api.nvim_create_namespace(M.nsName)
 M.create_autocmd = function(win_opts)
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
@@ -40,7 +69,6 @@ M.create_autocmd = function(win_opts)
       -- we are not collecting data and comparing with old/new
       -- so might be misrepresenting number of errors across project
       -- and only show per buffer
-
       local diag_count = { error = 0, warning = 0 }
       local diagnostics = vim.diagnostic.get(args.buf)
       for _, diag in ipairs(diagnostics) do
@@ -55,35 +83,17 @@ M.create_autocmd = function(win_opts)
           diag_count.warning = diag_count.warning + 1
         end
       end
-      if diag_count.error > 0 and diag_count.warning > 0 then
-        if not vim.api.nvim_win_is_valid(M.win) then
-          M.win = vim.api.nvim_open_win(M.buf, false, win_opts or M.default_win_opts) -- diag_count.error
-        end
-        local errStr = "-  Err:" .. diag_count.error .. "   Warn:" .. diag_count.warning .. "  -"
-        local errLen = #errStr --vim.fn.strwidth(errStr)
-        local errMid = math.floor(errLen / 2)
-        vim.bo[M.buf].modifiable = true
-        vim.api.nvim_buf_set_lines(M.buf, -2, -1, false, { errStr })
-        vim.bo[M.buf].modifiable = false
-        vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, 2, { end_col = errMid - 1, hl_group = M.eHl })
-        vim.api.nvim_buf_set_extmark(M.buf, M.ns, 0, errMid, { end_col = errLen - 2, hl_group = M.wHl })
-        vim.api.nvim_win_set_width(M.win, errLen)
-      elseif vim.api.nvim_win_is_valid(M.win) then
-        vim.api.nvim_win_close(M.win, true)
-        diag_count = { error = 0, warning = 0 }
-        M.last_diag.active = false
-      end
+
+      M.create_buf()
     end,
   })
 end
 M.setup = function(win_opts)
+  M.win_opts = win_opts or M.default_win_opts
   M.keymap_set()
   vim.api.nvim_set_hl(0, M.eHl, { bg = "#FF0000", fg = "Cyan" })
   vim.api.nvim_set_hl(0, M.wHl, { bg = "#FFFF00", fg = "Blue" })
-  M.create_autocmd(win_opts)
-  vim.bo[M.buf].buftype = "nofile"
-  vim.bo[M.buf].bufhidden = "hide"
-  vim.bo[M.buf].swapfile = false
+  M.create_autocmd()
 end
 
 return M
