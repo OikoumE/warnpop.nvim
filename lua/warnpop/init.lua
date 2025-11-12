@@ -43,7 +43,6 @@ M.create_string = function()
   return #errStr, errStr
 end
 M.create_buf = function()
-  print("diags:" .. tostring(#M.diags))
   if #M.diags > 0 then
     local errLen, errStr = M.create_string()
     if not vim.api.nvim_buf_is_valid(M.buf) then
@@ -67,20 +66,17 @@ M.create_buf = function()
       vim.api.nvim_win_close(M.win, true)
     end
     M.last_diag.active = false
-    vim.notify("closing win!" .. tostring(#M.diags))
-    print("closing win!" .. tostring(#M.diags))
   end
 end
 M.ns = vim.api.nvim_create_namespace(M.nsName)
 M.create_autocmd = function()
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
     callback = function(args)
-      local diagnostics = vim.diagnostic.get(args.buf)
-      --Fields `bufnr`, `end_lnum`, `end_col`, and `severity`
+      local diagnostics = vim.diagnostic.get(args.buf) --Fields `bufnr`, `end_lnum`, `end_col`, and `severity`
       M.diags = {}
       for _, diag in ipairs(diagnostics) do
         if diag.severity == severity.ERROR then
-          -- TODO: check if "In included file:"
+          -- check if "In included file:"
           if not diag.message:find("In included file:") and not M.last_diag.active then
             M.last_diag = { diagnostic = diag, args = args, active = true }
           end
