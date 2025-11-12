@@ -84,7 +84,7 @@ M.create_autocmd = function(win_opts)
         end
       end
 
-      M.create_buf()
+      M.create_buf(diag_count)
     end,
   })
 end
