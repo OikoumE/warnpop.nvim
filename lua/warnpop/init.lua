@@ -1,5 +1,5 @@
 local M = {
-  buf = vim.api.nvim_create_buf(false, true), -- listed =false, scratch =true
+  buf = -1, -- listed =false, scratch =true
   win = -1,
   win_opts = {},
   default_win_opts = {
